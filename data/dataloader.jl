@@ -12,18 +12,19 @@ function get_data(dataset, poollength, datalength, horizon)
     admissible = [:solar, :traffic, :exchange_rate, :electricity]
     dataset in admissible || error("Sample data not implemented")
 
-    datalength = datalength + poollength
     (dataset == :solar) && (BSON.@load "../data/solar_AL.bson" inp_raw)
     (dataset == :traffic) && (BSON.@load "../data/traffic.bson" inp_raw)
     (dataset == :exchange_rate) && (BSON.@load "../data/exchange_rate.bson" inp_raw)
     (dataset == :electricity) && (BSON.@load "../data/electricity.bson" inp_raw)
 
-    out_ft = similar(inp_raw, size(inp_raw,2), poollength, 1, size(inp_raw,1))
-    for i=0:poollength-1
-        for j=poollength:min(datalength, size(inp_raw,1)-poollength)
-            out_ft[:,i+1,1,j] = inp_raw[j-i,:]
+    lostIdx = horizon + poollength
+    datalength = min(datalength,size(inp_raw,1) - lostIdx)
+    out_ft = similar(inp_raw, size(inp_raw,2), poollength, 1, datalength)
+    for i=1:poollength
+        for j=1:datalength
+            out_ft[:,i,1,j] = inp_raw[poollength + j - i,:]
         end
     end
-    out_lb = circshift(inp_raw[1:datalength-poollength,1], -horizon)
-    return out_ft[:,:,:,1:min(datalength, size(inp_raw,1)-poollength)-poollength], out_lb
+    out_lb = inp_raw[(1 + lostIdx :datalength + lostIdx ),1]
+    return out_ft, out_lb
 end
